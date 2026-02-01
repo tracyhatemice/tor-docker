@@ -24,7 +24,7 @@ and removing ads and other obnoxious Internet junk.
 
 ## Exposing the port
 
-    sudo docker run -it -p 8118:8118 -p 9050:9050 -d ghcr.io/simonhaas/torproxy/torproxy:latest
+    sudo docker run -it -p 8118:8118 -p 9050:9050 -d ghcr.io/tracyhatemice/tor:latest
 
 **NOTE**: it will take a while for tor to bootstrap...
 
@@ -34,7 +34,7 @@ tor via the socks protocol directly at `http://hostname:9050`.
 
 ## Complex configuration
 
-    sudo docker run -it --rm ghcr.io/simonhaas/torproxy/torproxy:latest -h
+    sudo docker run -it --rm ghcr.io/tracyhatemice/tor:latest -h
     Usage: torproxy.sh [-opt] [command]
     Options (fields in '[]' are optional, '<>' are required):
         -h          This help
@@ -78,24 +78,24 @@ Any of the commands can be run at creation with `docker run` or later with
 ### Setting the Timezone
 
     sudo docker run -it -p 8118:8118 -p 9050:9050 -e TZ=EST5EDT \
-                -d ghcr.io/simonhaas/torproxy/torproxy:latest
+                -d ghcr.io/tracyhatemice/tor:latest
 
 ### Start torproxy setting the allowed bandwidth:
 
-    sudo docker run -it -p 8118:8118 -p 9050:9050 -d ghcr.io/simonhaas/torproxy/torproxy:latest -b 100
+    sudo docker run -it -p 8118:8118 -p 9050:9050 -d ghcr.io/tracyhatemice/tor:latest -b 100
 
 OR
 
-    sudo docker run -it -p 8118:8118 -p 9050:9050 -e BW=100 -d ghcr.io/simonhaas/torproxy/torproxy:latest
+    sudo docker run -it -p 8118:8118 -p 9050:9050 -e BW=100 -d ghcr.io/tracyhatemice/tor:latest
 
 ### Start torproxy configuring it to be an exit node:
 
-    sudo docker run -it -p 8118:8118 -p 9050:9050 -d ghcr.io/simonhaas/torproxy/torproxy:latest -e
+    sudo docker run -it -p 8118:8118 -p 9050:9050 -d ghcr.io/tracyhatemice/tor:latest -e
 
 OR
 
     sudo docker run -it -p 8118:8118 -p 9050:9050 -e EXITNODE=1 \
-                -d ghcr.io/simonhaas/torproxy/torproxy:latest
+                -d ghcr.io/tracyhatemice/tor:latest
 
 ## Test the proxy:
 
@@ -111,7 +111,7 @@ to copy it from a running container:
 Then mount it to a new container like:
 
     sudo docker run -it -p 8118:8118 -p 9050:9050 \
-                -v /some/torrc:/etc/tor/torrc:ro -d ghcr.io/simonhaas/torproxy/torproxy:latest
+                -v /some/torrc:/etc/tor/torrc:ro -d ghcr.io/tracyhatemice/tor:latest
 
 # User Feedback
 
@@ -123,14 +123,13 @@ If you are affected by this issue (a small percentage of users are) please try
 setting the TORUSER environment variable to root, IE:
 
     sudo docker run -it -p 8118:8118 -p 9050:9050 -e TORUSER=root -d \
-                ghcr.io/simonhaas/torproxy/torproxy:latest
+                ghcr.io/tracyhatemice/tor:latest
 
 ### Reporting
 
 If you have any problems with or questions about this image, please contact me
-through a [GitHub issue](https://github.com/simonhaas/torproxy/issues).
+through a GitHub issue.
 
 # Credit
 
 torproxy was originally created by [dperson](https://github.com/dperson/torproxy).
-As he does not seem to maintain it anymore I forked it and made it my own.
