@@ -1,8 +1,9 @@
-[![logo](https://raw.githubusercontent.com/simonhaas/torproxy/master/logo.png)](https://torproject.org/)
+[![logo](https://raw.githubusercontent.com/tracyhatemice/tor-docker/blob/main/logo.png)](https://torproject.org/)
 
 # Tor and Privoxy
 
-Tor and Privoxy (web proxy configured to route through tor) docker container
+Tor and Privoxy (web proxy configured to route through tor) docker container,
+supervised by `s6-overlay`.
 
 # What is Tor?
 
@@ -28,30 +29,17 @@ and removing ads and other obnoxious Internet junk.
 
 **NOTE**: it will take a while for tor to bootstrap...
 
-Then you can hit privoxy web proxy at `http://host-ip:8118` with your browser or
-tor via the socks protocol directly at `http://hostname:9050`.
+Then you can hit privoxy web proxy at `hostname:8118` with your browser or
+tor via the socks protocol directly at `hostname:9050`.
 
 
-## Complex configuration
+## Configuration
 
-    sudo docker run -it --rm ghcr.io/tracyhatemice/tor:latest -h
-    Usage: torproxy.sh [-opt] [command]
-    Options (fields in '[]' are optional, '<>' are required):
-        -h          This help
-        -b ""       Configure tor relaying bandwidth in KB/s
-                    possible arg: "[number]" - # of KB/s to allow
-        -e          Allow this to be an exit node for tor traffic
-        -l "<country>" Configure tor to only use exit nodes in specified country
-                    required args: "<country>" (IE, "US" or "DE")
-                    <country> - country traffic should exit in
-        -n          Generate new circuits now
-        -p "<password>" Configure tor HashedControlPassword for control port
-        -s "<port>;<host:port>" Configure tor hidden service
-                    required args: "<port>;<host:port>"
-                    <port> - port for .onion service to listen on
-                    <host:port> - destination for service request
+This image starts through `s6-overlay` (`/init`) and keeps `tor` and
+`privoxy` as independent supervised services.
 
-    The 'command' (if provided and valid) will be run instead of torproxy
+Configuration is made possible via `torproxy.sh` script, and is environment-variable based (`BW`, `EXITNODE`, `LOCATION`,
+`PASSWORD`, `SERVICE`, `NEWNYM`, `USERID`, `GROUPID`, and `TOR_*`).
 
 ENVIRONMENT VARIABLES
 
@@ -61,6 +49,7 @@ ENVIRONMENT VARIABLES
  * `LOCATION` - As above, configure the country to use for exit node selection
  * `PASSWORD` - As above, configure HashedControlPassword for control port
  * `SERVICE` - As above, configure hidden service, IE '80;hostname:80'
+ * `NEWNYM` - Generate new circuits now (only when tor is already running)
  * `TZ` - Configure the zoneinfo timezone, IE `EST5EDT`
  * `USERID` - Set the UID for the app user
  * `GROUPID` - Set the GID for the app user
@@ -72,8 +61,7 @@ file accordingly:
 
 ## Examples
 
-Any of the commands can be run at creation with `docker run` or later with
-`docker exec -it tor torproxy.sh` (as of version 1.3 of docker).
+For startup-time configuration with `s6-overlay`, prefer environment variables.
 
 ### Setting the Timezone
 
@@ -82,17 +70,9 @@ Any of the commands can be run at creation with `docker run` or later with
 
 ### Start torproxy setting the allowed bandwidth:
 
-    sudo docker run -it -p 8118:8118 -p 9050:9050 -d ghcr.io/tracyhatemice/tor:latest -b 100
-
-OR
-
     sudo docker run -it -p 8118:8118 -p 9050:9050 -e BW=100 -d ghcr.io/tracyhatemice/tor:latest
 
 ### Start torproxy configuring it to be an exit node:
-
-    sudo docker run -it -p 8118:8118 -p 9050:9050 -d ghcr.io/tracyhatemice/tor:latest -e
-
-OR
 
     sudo docker run -it -p 8118:8118 -p 9050:9050 -e EXITNODE=1 \
                 -d ghcr.io/tracyhatemice/tor:latest

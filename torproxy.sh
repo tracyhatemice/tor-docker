@@ -4,7 +4,7 @@
 #
 #         USAGE: ./torproxy.sh
 #
-#   DESCRIPTION: Entrypoint for torproxy docker container
+#   DESCRIPTION: Configuration helper for torproxy docker container
 #
 #       OPTIONS: ---
 #  REQUIREMENTS: ---
@@ -86,41 +86,32 @@ password() { local passwd="$1" file=/etc/tor/torrc hash
 #   none)
 # Return: Help text
 usage() { local RC="${1:-0}"
-    echo "Usage: ${0##*/} [-opt] [command]
-Options (fields in '[]' are optional, '<>' are required):
-    -h          This help
-    -b \"\"       Configure tor relaying bandwidth in KB/s
-                possible arg: \"[number]\" - # of KB/s to allow
-    -e          Allow this to be an exit node for tor traffic
-    -l \"<country>\" Configure tor to only use exit nodes in specified country
-                required args: \"<country>\" (IE, "US" or "DE")
-                <country> - country traffic should exit in
-    -n          Generate new circuits now
-    -p \"<password>\" Configure tor HashedControlPassword for control port
-    -s \"<port>;<host:port>\" Configure tor hidden service
-                required args: \"<port>;<host:port>\"
-                <port> - port for .onion service to listen on
-                <host:port> - destination for service request
+    echo "Usage: ${0##*/} [command]
 
-The 'command' (if provided and valid) will be run instead of torproxy
+Configuration is environment-variable based:
+    BW          Configure tor relaying bandwidth in KB/s
+    EXITNODE    Allow this to be an exit node for tor traffic
+    LOCATION    Configure tor to only use exit nodes in specified country
+    PASSWORD    Configure tor HashedControlPassword for control port
+    SERVICE     Configure tor hidden service as '<port>;<host:port>'
+    NEWNYM      Generate new circuits now (only when tor is already running)
+    USERID      Set the UID for the tor user
+    GROUPID     Set the GID for the tor user
+
+Other variables beginning with TOR_ map to torrc keys.
+The 'command' (if provided and valid) will be run instead of torproxy.
 " >&2
     exit $RC
 }
 
-while getopts ":hb:el:np:s:" opt; do
-    case "$opt" in
-        h) usage ;;
-        b) bandwidth "$OPTARG" ;;
-        e) exitnode ;;
-        l) exitnode_country "$OPTARG" ;;
-        n) newnym ;;
-        p) password "$OPTARG" ;;
-        s) IFS=';' read -r port host <<< "$OPTARG"; hidden_service "$port" "$host" ;;
-        "?") echo "Unknown option: -$OPTARG"; usage 1 ;;
-        ":") echo "No argument value for option: -$OPTARG"; usage 2 ;;
-    esac
-done
-shift $(( OPTIND - 1 ))
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    usage
+fi
+
+if [[ "${1:-}" == -* ]]; then
+    echo "ERROR: CLI config flags were removed; use environment variables instead."
+    usage 2
+fi
 
 [[ "${BW:-""}" ]] && bandwidth "$BW"
 [[ "${EXITNODE:-""}" ]] && exitnode
@@ -129,32 +120,34 @@ shift $(( OPTIND - 1 ))
 [[ "${SERVICE:-""}" ]] && { IFS=';' read -r port host <<< "$SERVICE"; hidden_service "$port" "$host"; }
 [[ "${USERID:-""}" =~ ^[0-9]+$ ]] && usermod -u "$USERID" -o tor
 [[ "${GROUPID:-""}" =~ ^[0-9]+$ ]] && groupmod -g "$GROUPID" -o tor
-for env in $(printenv | grep '^TOR_'); do
-    name="$(cut -c5- <<< ${env%%=*})"
-    val="\"${env##*=}\""
+while IFS='=' read -r raw_name raw_val; do
+    name="${raw_name#TOR_}"
+    val="\"$raw_val\""
     [[ "$name" =~ _ ]] && continue
-    [[ "$val" =~ ^\"([0-9]+|false|true)\"$ ]] && val="$(sed 's|"||g' <<< $val)"
+    [[ "$val" =~ ^\"([0-9]+|false|true)\"$ ]] && val="$(sed 's|"||g' <<< "$val")"
     if grep -q "^$name" /etc/tor/torrc; then
         sed -i "/^$name/s| .*| $val|" /etc/tor/torrc
     else
         echo "$name $val" >>/etc/tor/torrc
     fi
-done
+done < <(printenv | grep '^TOR_')
 
 chown -Rh tor /etc/tor /var/lib/tor /var/log/tor 2>&1 |
             grep -iv 'Read-only' || :
+
+if [[ "${CONFIG_ONLY:-""}" =~ ^(1|true|TRUE|yes|YES)$ ]]; then
+    exit 0
+fi
+
+if [[ "${NEWNYM:-""}" =~ ^(1|true|TRUE|yes|YES)$ ]]; then
+    newnym
+fi
 
 if [[ $# -ge 1 && -x $(command -v "$1" 2>/dev/null) ]]; then
     exec "$@"
 elif [[ $# -ge 1 ]]; then
     echo "ERROR: command not found: $1"
     exit 13
-elif ps -ef | grep -Ev 'grep|torproxy.sh' | grep -q tor; then
-    echo "Service already running, please restart container to apply changes"
-else
-    [[ -e /var/lib/tor/hidden_service/hostname ]] && {
-        echo -en "\nHidden service hostname: "
-        cat /var/lib/tor/hidden_service/hostname; echo; }
-    /usr/sbin/privoxy --user privoxy /etc/privoxy/config
-    exec /usr/bin/tor
 fi
+
+exit 0

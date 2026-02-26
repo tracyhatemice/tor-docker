@@ -1,0 +1,9 @@
+#!/command/execlineb -P
+with-contenv
+export CONFIG_ONLY 1 /usr/bin/torproxy.sh
+
+if [ -e /var/lib/tor/hidden_service/hostname ]; then
+    echo ""
+    echo -n "Hidden service hostname: "
+    cat /var/lib/tor/hidden_service/hostname
+fi
