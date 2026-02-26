@@ -1,4 +1,4 @@
-[![logo](https://raw.githubusercontent.com/tracyhatemice/tor-docker/blob/main/logo.png)](https://torproject.org/)
+[![Build Status](https://github.com/tracyhatemice/tor-docker/actions/workflows/image.yaml/badge.svg)](https://github.com/tracyhatemice/tor-docker/actions/workflows/image.yaml)
 
 # Tor and Privoxy
 
