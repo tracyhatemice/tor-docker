@@ -21,7 +21,7 @@ set -o errexit                              # Exit on error
 set -o pipefail                             # Exit on pipe failure
 
 ### bandwidth: set the BW available for relaying
-# Arguments:
+# Env:
 #   KiB/s) KiB/s of data that can be relayed
 # Return: Updated configuration file
 bandwidth() { local kbs="${1:-10}" file=/etc/tor/torrc
@@ -31,7 +31,7 @@ bandwidth() { local kbs="${1:-10}" file=/etc/tor/torrc
 }
 
 ### exitnode: Allow exit traffic
-# Arguments:
+# Env:
 #   N/A)
 # Return: Updated configuration file
 exitnode() { local file=/etc/tor/torrc
@@ -39,8 +39,8 @@ exitnode() { local file=/etc/tor/torrc
 }
 
 ### exitnode_country: Only allow traffic to exit in a specified country
-# Arguments:
-#   country) country where we want to exit
+# Env:
+#   LOCATION: country where we want to exit
 # Return: Updated configuration file
 exitnode_country() { local country="$1" file=/etc/tor/torrc
     sed -i '/^StrictNodes/d; /^ExitNodes/d' "$file"
@@ -49,9 +49,8 @@ exitnode_country() { local country="$1" file=/etc/tor/torrc
 }
 
 ### hidden_service: setup a hidden service
-# Arguments:
-#   port) port to connect to service
-#   host) host:port where service is running
+# Env:
+#   SERVICE: hidden service configuration in the format '<port>;<host:port>'
 # Return: Updated configuration file
 hidden_service() { local port="$1" host="$2" file=/etc/tor/torrc
     sed -i '/^HiddenServicePort '"$port"' /d' "$file"
@@ -61,7 +60,7 @@ hidden_service() { local port="$1" host="$2" file=/etc/tor/torrc
 }
 
 ### newnym: setup new circuits
-# Arguments:
+# Env:
 #   N/A)
 # Return: New circuits for tor connections
 newnym() { local file=/etc/tor/run/control.authcookie
@@ -71,18 +70,18 @@ newnym() { local file=/etc/tor/run/control.authcookie
 }
 
 ### password: setup a hashed password
-# Arguments:
-#   passwd) passwd to set
+# Env:
+#   PASSWORD: passwd to set
 # Return: Updated configuration file
 password() { local passwd="$1" file=/etc/tor/torrc hash
     sed -i '/^HashedControlPassword/d' "$file"
-    sed -i '/^ControlPort/s/ 9051/ 0.0.0.0:9051/' "$file"
+    sed -i '/^ControlPort/s/ 9051/ [::]]:9051/' "$file"
     hash=$(su - tor -s /bin/bash -c "tor --hash-password \"\$1\" 2>/dev/null | tail -n 1" -- - "$passwd")
     echo "HashedControlPassword $hash" >>"$file"
 }
 
 ### usage: Help
-# Arguments:
+# Env:
 #   none)
 # Return: Help text
 usage() { local RC="${1:-0}"
@@ -134,20 +133,3 @@ done < <(printenv | grep '^TOR_')
 
 chown -Rh tor /etc/tor /var/lib/tor /var/log/tor 2>&1 |
             grep -iv 'Read-only' || :
-
-if [[ "${CONFIG_ONLY:-""}" =~ ^(1|true|TRUE|yes|YES)$ ]]; then
-    exit 0
-fi
-
-if [[ "${NEWNYM:-""}" =~ ^(1|true|TRUE|yes|YES)$ ]]; then
-    newnym
-fi
-
-if [[ $# -ge 1 && -x $(command -v "$1" 2>/dev/null) ]]; then
-    exec "$@"
-elif [[ $# -ge 1 ]]; then
-    echo "ERROR: command not found: $1"
-    exit 13
-fi
-
-exit 0
